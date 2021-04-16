@@ -9,6 +9,16 @@ library(stargazer)
 library(lmtest)
 library(sandwich)
 library(mfx)
+library(conflicted)
+
+#declare preferences for conflicts
+conflict_prefer("select", "dplyr")
+conflict_prefer("filter", "dplyr")
+conflict_prefer("year", "lubridate")
+conflict_prefer("month", "lubridate")
+conflict_prefer("day", "lubridate")
+conflict_prefer("lag", "dplyr")
+
 
 ##=================COLLECT AND CLEAN ROLL CALL DATA======================##
 
@@ -635,5 +645,4 @@ marginal_effects_108th <- data.frame("Variable" = c("log_d_imp", "Dim1_108th", "
 marginal_effects_108th %>% knitr::kable(format="latex",
                                         digits=2)
                                                                      
-
-
+summarytools::descr(trade_comp_108$d_imp_otch_lag_pd) %>% knitr::kable(format = "latex", digits=2)
