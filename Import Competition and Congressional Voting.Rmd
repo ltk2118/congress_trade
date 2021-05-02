@@ -1,0 +1,255 @@
+---
+title: "Import Competition and Congressional Voting Behaviour"
+author: Liam Tay Kearney ltk2118
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: 
+  pdf_document:
+    keep_tex: false
+    fig_caption: false
+    latex_engine: pdflatex
+header-includes:
+  -  \usepackage{hyperref}
+biblio-style: apsr
+geometry: margin=0.8in
+fontfamily: mathpazo
+fontsize: 11pt
+# spacing: double
+endnote: no
+urlcolor: blue
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache=FALSE,
+                      message=FALSE, warning=FALSE, echo=FALSE,
+                      fig.path='figs/',
+                      cache.path = '_cache/',
+                      fig.process = function(x) {
+                      x2 = sub('-\\d+([.][a-z]+)$', '\\1', x)
+                      if (file.rename(x, x2)) x2 else x
+                      })
+
+#note: all the correct packages must be installed
+#note, Rvoteview must be installed via devtools
+#devtools::install_github("voteview/Rvoteview")
+
+#otherwise, load the pre-built dataset --
+#uncomment the below code and remove the source command on line 40
+#load(url("https://github.com/ltk2118/congress_trade/blob/main/imports_congress_final.RData?raw=true"))
+
+#note, this file must be in the same working directory
+source("imports_congress_prep.R")
+
+```
+
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;
+&nbsp;
+
+# Introduction
+
+There has been much attention devoted to analyzing the labor market impacts of exposure to import competition. However, it is not clear whether exposure to import competition alters the voting behavior of elected members of congress on trade-related legislation. This is an important policy question pertaining to the endogeneity between political expression for or against free trade, and its economic outcomes.
+
+The central problem to be discussed in this brief is the following: *What is the effect of greater import competition on congressional voting behaviour on legislation aimed at enhancing free trade?* Secondarily, if there is any effect, it will be useful to understand how long it persists.
+
+Since the literature and theory are not conclusive, the problem must be tested empirically. The empirical method begins with a graphical exploration of the data. Following this, an ordinary least squares model is estimated on aggregate voting behaviour with a full set of controls and robustness checks. Finally, a series of probit regressions is conducted on individual roll call votes and related legislation.
+
+I find evidence that higher levels of exposure to import competition in congressional districts leads to a lower propensity to vote for free trade agreements for the members representing those districts, on average. The effect is robust to a full set of controls when estimated with OLS and probit. I find evidence of an effect that persists from the 108th to the 112th Congress but not beyond that. Further, there is evidence of a partisan divide in the voting response, which is more strongly negative for Republicans.
+
+\newpage
+
+# Literature Review
+
+The seminal work of [Autor, Dorn and Hanson (2013)](https://www.aeaweb.org/articles?id=10.1257/aer.103.6.2121) found that rising import competition from China during the period 1990-2007 causes increased unemployment, lower labor force participation, and reduced wages in local labor markets with import-competing manufacturing industries. Studying U.S. Presidential elections, [Margalit (2011)](https://www.jstor.org/stable/41480833?seq=1#metadata_info_tab_contents) discovered that voters are more sensititive to job losses resulting from foreign competition vis-a-vis other factors. Moreover, [Kuk, Seligsohn and Zhang (2018)](https://www.tandfonline.com/doi/full/10.1080/10670564.2017.1363024) found that congresspeople representing districts with higher import competition are more likely to support legislation perceived to be hostile toward China. Tangentially, [Baldwin and Magee (1999)](https://www.jstor.org/stable/30026171?seq=1#metadata_info_tab_contents) found that campaign contributions from labor groups resulted in lower congressional voting for free trade, while contributions from business had the opposite effect.
+
+Although the empirical methodology for studying import competition has been well developed, due in no small part to ADH, none of the existing literature deals directly with the effect of rising import competition on congressional votes for free trade (and FTAs in particular). This is the principal contribution of this brief.
+
+# Theoretical Framework
+I borrow from the literature studying effects of import competition, applying the relevant empirical techniques to a new context (house roll call voting). I utilize the period 2000-2010 (the period immediately following China's accession to the World Trade Organization) as it reflects a substantial increase in import competition compared to the previous period. Initially the scope of the analysis is limited to house votes on free trade agreements (FTAs), in order to generate a sufficient sample size of comparable legislation that might reasonably proxy a legislator's broader stance on trade openness.
+
+I hypothesize that members representing congressional districts with higher import competition
+intensity will exhibit a lower propensity to vote for free trade agreements, controlling for legislator ideology and regional, demographic, and structural economic characteristics of the district.
+
+There are several potential caveats to this framework. Since the sample of roll call votes is limited to FTAs, which are heterogeneous and highly country-specific, this might not adequately capture legislator attitudes toward trade openness more broadly (we might be picking up more idiosyncratic characteristics of the FTAs themselves). In addition, the bulk of the legislation was passed during the 108th and 112th Congresses (both under a Republican House Majority), so the findings may not be generalizable to other party compositions of the U.S. Government. 
+
+# Data
+
+I use the measure of trade exposure derived by [Acemoglu et al. (2016)](https://economics.mit.edu/files/11560) and [Autor et al. (2014)](https://www.nber.org/system/files/working_papers/w19226/w19226.pdf) at the Commuting Zone (CZ) level. The measure of exposure ("import competition intensity") is calculated for every CZ as the average change in Chinese import penetration in that CZ’s industries, weighted by the share of each industry in initial employment, from 2002 to 2010. Import penetration is defined as the growth in US imports from China over the span of the period, divided by initial absorption. Because realized U.S. imports may be associated with demand-side factors, I use the import competition intensity measure of [Autor et al. (2016)](https://www.nber.org/papers/w22637), who instrument U.S. import growth using contemporaneous growth in imports to eight other developed countries. This helps isolate the causal effect of a purely supply-driven import competition shock. Finally, since the data is heavily right skewed I employ a logarithmic transformation. The county-level spatial distribution of the logged, instrumented measure of import competition intensity can be seen in Figure (1) below. Similar maps of manufacturing industry share and offshorability can be found in [Appendix 1].
+
+
+```{r, echo=FALSE, warning=FALSE,  message=FALSE, results='asis', fig.align = 'center', out.width="80%"}
+import_map #map of import competition intensity -- include in main 
+```
+
+For the roll call data I use the [Rvoteview](https://github.com/voteview/Rvoteview) package in R. This is used to identify the relevant FTA legislation and collect detailed information on both votes (date, type of vote, party vote behavior) and individual legislators (names, districts, nominate scores). "Yea" votes represent votes for the free trade agreements and are coded as 1, while "Nay" votes are coded as 0 and abstentions are dropped (for a full list of the FTA votes please consult [Appendix 2]). Similarly, for party affiliation I recode Republicans to 1, Democrats to 0, and drop independents^[Some independents, such as Bernie Sanders, are recoded as Democrat. In addition, districts for which the incumbent changed party mid-way through a Congressional session are dropped in the aggregated OLS analysis, but re-added for the probit analysis.].
+
+A full set of covariates is added to control for demographic (age, race, sex, share foreign born, share with some college education - all population proportions), regional (dummies corresponding to broad geographic regions of the U.S., e.g. Pacific, Mountain) and labor market characteristics (% of labor force in routine tasks, % share in manufacturing, and a measure of occupation offshorability). Both the covariate and import competition data are compiled at the county-district cell level, and are thus aggregated up to the congressional district level by taking weighted sums (with weights based on cell shares of each district's total population). This is then joined with the cleaned roll call voting data. A basic descriptive visualization of the two main variables is shown in Figure 2, with the Pearson correlation coefficient in the top right box, scatter plot in the bottom left and histograms along the main diagonal. Further descriptive analysis is available in [Appendix 3].
+
+Since I also want to test whether the effect of import competition (if any) persists after the 112th Congress, the major congressional redistricting prior to the 113th congress must be taken into account. For each district, I calculate new county-district cell population shares using the crosswalk files available from David Dorn's [website](https://www.ddorn.net/data.htm) and aggregate to the district level using the new weightings. 
+
+\newpage
+
+```{r, echo=FALSE, warning=FALSE,  message=FALSE, results='asis', fig.align = 'center', out.width="70%"}
+smatrices_out(1) #average vote 108-112, import comp
+```
+The scatter plots in Figure 3 show the FTA voting patterns by party across the 108th, 109th, 110th and 112th Congresses (the 111th Congress is omitted as there were no FTA votes). There is a clear negative relationship between import competition intensity and likelihood to vote for the FTA for both parties (yea=1). Republicans are more likely to vote yea unconditionally throughout the period in question. Figure 4 shows that in each congress, the average yea vote is lower for districts with high import competition intensity vis-a-vis low import competition intensity districts. These observations motivate the empirical analysis that follows.
+
+
+```{r, echo=FALSE, warning=FALSE,  message=FALSE, results='asis', fig.align = 'center'}
+gridExtra::grid.arrange(plot_1,plot_5,ncol=2)
+```
+
+# Estimation and Results
+
+## OLS
+The first part of analysis uses OLS to estimate the following linear population regression function: 
+
+$$\text{Yea vote}_i = \beta_0 + \beta_1\text{intensity}_i+\beta_2\text{dim1}_i + \beta_3\text{party}_i+\beta_4\text{intensity}_i*\text{party}_i + \beta_{5...N}\textbf{X}_i+u_i$$
+
+I use the legislator nominate score (dimension 1) to control for ideology, and control for party explicitly. I also allow for an interactive effect between intensity and party, as [Dorn and Autor (2020)](https://economics.mit.edu/files/11499) find that political outcomes associated with trade shocks exhibit large variation by party affiliation. Finally, I add covariates sequentially to control for regional, demographic and labor market characteristics of the district. A Breusch-Pagan test revealed the presence of heteroskedasticity, so robust covariance matrix estimators are used to calculate standard errors for all specifications. A Breusch-Godfrey test revealed no evidence of serial correlation in the residuals. Some demographic covariates exhibited variance inflation factors of over 20, and were removed in order to increase the precision of the estimates. Results for the OLS regressions are shown below for the 108th Congress with residual diagnostics available in [Appendix 10].
+
+```{r, echo=FALSE, warning=FALSE,  message=FALSE, results='asis', fig.align = 'center'}
+models_out(2) #OLS for 108th Congress, building up specifications -- include in main
+```
+
+Notably, the the coefficient on import competition intensity ($log\_d\_imp$) is significant at the 5% level for all specifications. The mangitude of the coefficient estimate is robust to inclusion of ideology, party and all covariates, at around -0.13. This suggests that a 1% increase in import competition intensity (i.e. a 1 basis point increase in average Chinese import penetration over the period 2000-2010) is associated with a 13 percentage point reduction in the likelihood to vote yea on FTA legislation in the 108th congress (with full controls). Estimates for the average yea vote in the 108th, 109th and 112th congresses (i.e. those congresses for which there were at least 3 FTA votes) can be found in [Appendix 4].
+These show that although there was no detectable effect in the 109th congress, the effect was significant in the 112th, with a coefficient of similar magnitude to that of the 108th congress (an 11 percentage point reduction).
+
+## Probit 
+
+Since the dependent variable is binary in its disaggregated form (Yea=1 and Nay=0) it makes sense to check the robustness of the OLS findings with a probit model. Probit is also useful in assessing the impact of import competition intensity on individual bills, and congresses such as the 110th and 116th for which there was only one FTA house vote. For all subsequent probit specifications, coefficients represent estimated marginal effects calculated at the mean value of the independent variables. Probit estimates for the US-Peru FTA (110th congress) and USMCA (116th) congress are shown in [Appendix 5], though the estimates are not significant. This may reflect the import shock from 2000-2010 having "worn off" by the 2019 USMCA vote (or could be due to the idiosyncracies of the UMSCA itself). In any case, I find no evidence of heightened import competition intensity from 2000-2010 reflected in vote behavior beyond the 112th congress (2011-2013), though this could simply be due to data sparsity.
+
+Next, I turn back to the 108th congress and estimate probit models for each of the five FTAs that received a house vote during that session (Dominican Republic, Singapore, Chile, Australia and Morocco)^[The probit model for the Central American Free Trade Agreement (CAFTA - Dominican Republic) did not converge and is hence omitted from the results. A logistic regression specification also failed to converge.]. Without including any labor market controls, the probit estimates are all highly significant with marginal effects similar in magnitude to the OLS estimates - a 1% increase in import competition intensity associated with a 10-16 percentage point reduction in yea vote likelihood at the mean (see [Appendix 6]). However, when labor market controls are added (manufacturing share in district industries, share of routine jobs and occupation offshorability) the effects are no longer significant (see Table 2, below). 
+
+Notably, the estimates on the individual labor market controls are mostly insignificant but including them together removes the significance from the import competition intensity variable. However, the coefficient on $log\_d\_imp \times party$ *is* significant and negative in three of the four specifications, and its magnitude is consistent, with a marginal effect of -0.24 to -0.28 at the mean. Thus the probits find evidence that higher import competition intensity combined with being Republican does significantly reduce the likelihood of voting for FTAs. At the mean of the independent variables, a 1% increase in import competition intensity reduces the likelihood of voting yea by around 25 percentage points if the congressperson is a Republican^[Intuitively, this makes sense because Republicans have a much higher "baseline" from which their yea vote can decrease - see Figures 3 and 4.].
+
+```{r, echo=FALSE, warning=FALSE,  message=FALSE, results='asis', fig.align = 'center'}
+models_out(6) #same as 5 but with full labor market controls
+```
+
+I repeat the same analysis for the individual FTA votes in the 112th congress^[In the 112th Congress, there was a Republican House majority but a Democrat president. This is different from the 108th where Republicans controlled the House, Senate and Presidency.] with results presented in [Appendix 7]. Interestingly, for the Colombia FTA there is significant and negative marginal effect of import competition intensity (23 percentage points) for democrats (the offsetting significant positive coefficient on $log\_d\_imp \times party$ cancels out the effect for Republicans). However, on the US-Korea KORUS agreement the effect is significant and negative only for Republicans (21 percentage points). This likely has to do with idiosyncrasies of the respective agreements and the target countries. Overall, the findings are consistent with the hypothesis that rising import competition intensity reduces propensity to vote for free trade agreements by an appreciable margin. However, the data for the 108th congress is consistent, showing that increased import competition intensity had a significant negative effect in reducing FTA yea votes by Republicans (who had control of the House, Senate and Presidency at the time). Richer data and further study is necessary to disentangle how the effects differ by party in broader contexts.
+
+Finally, to broaden the scope of the analysis I use the same empirical strategy to analyze the effect of import competition intensity on voting for trade adjustment assistance. I collect roll call data on two bills - the [Trade and Globalization Assistance Act of 2007](https://www.congress.gov/bill/110th-congress/house-bill/3920) and the 2011 [Extension of the Generalized System of Preferences](https://www.congress.gov/bill/112th-congress/house-bill/2832) which also incorporated extensions of the Trade Adjustment Assistance program. Results for the probit analysis on these bills is shown in [Appendix 8]. Although the coefficients are significant they are of negligible magnitude. Thus, contrary to the findings on FTA vote behavior, I find no evidence that increased levels of import competition result in higher than average house support for trade adjustment assistance. This finding is somewhat surprising.
+
+
+# Conclusion and Policy Implications
+In general I find reasonably strong evidence that, on average, higher import competition intensity reduces the likelihood of congressional voting for free trade agreements irrespective of legislator ideology. This effect is robust to a full set of labor market, demographic and regional control variables. The OLS estimates show that a 1% increase in import competition intensity reduces the likelihood of voting for FTAs by 10 to 15 percentage points regardless of party. The probit estimates show that the marginal effect at the mean of a 1% increase in import competition intensity is a reduction the likelihood of voting for an FTA by 20 to 25 percentage points in the 108th congress, but only if the member is Republican (the party-unconditional effect is not significant). Probits for the 112th congress show more mixed effects by party but point to an overall reduction in FTA yea votes in higher import competition districts. Using trade data from 2000-10 I find no evidence that the import competition effect persisted beyond the 112th congress (2011-2013) but this may simply be due to data sparsity. Finally, I find no evidence that import competition intensity affects house voting behavior on legislation related to trade adjustment assistance.
+
+The findings have a number of important policy implications and raise a number of questions for further research. Previous findings have shown that import competition increases unemployment and reduces wages in exposed local labor markets - but the effects on congressional voting have not been studied in detail. This brief shows that import competition also reduces members' propensity to vote for FTA legislation in the house. To the extent that FTAs proxy a broader array of trade legislation, the effect of higher import competition is to induce members of congress to vote for reduced trade openness. The finding is consistent with previous work that demonstrates the sensitivity of voters to foreign competition shocks, and suggests that members of congress are somewhat responsive to the constituency when it comes to free-trade legislation in the house. More broadly, the results point to a clear endogenous relationship between legislating for trade openness, and its local labor market effects. Policymakers should be cognizant of this relationship and design effective mitigation policies for those areas hardest hit.
+
+A promising way forward may be to incorporate data on lobby groups and estimate an adapted protection for sale model of [Grossman and Helpman (1994)](https://www.jstor.org/stable/2118033?seq=1#metadata_info_tab_contents). The analysis should also be extended to more types of trade-promoting (or trade-restricting) legislation and include senate voting behavior. It would also be useful to recalculate the import competition intensity data for a period extending beyond 2010, to increase the generalizability of the findings to a contemporary context. To the extent that import competition intensity can be calculated at different intervals, panel estimation techniques can also be used.
+
+# References
+
+Acemoglu, D., Autor, D., Dorn, D., Hanson, G. H., & Price, B. (2015). Import Competition and the Great US Employment Sag of the 2000s. Journal of Labor Economics, 34(S1), S141–S198. https://doi.org/10.1086/682384
+
+Autor, D., Dorn, D., Hanson, G., & Majlesi, K. (2016). Importing Political Polarization? The Electoral Consequences of Rising Trade Exposure (No. w22637). National Bureau of Economic Research. https://doi.org/10.3386/w22637
+
+Autor, D., Dorn, D., Hanson, G., & Majlesi, K. (2020). Importing Political Polarization? The Electoral Consequences of Rising Trade Exposure. American Economic Review, 110(10), 3139–3183. https://doi.org/10.1257/aer.20170011
+
+Autor, D. H., Dorn, D., & Hanson, G. H. (2013). The China Syndrome: Local Labor Market Effects of Import Competition in the United States. American Economic Review, 103(6), 2121–2168. https://doi.org/10.1257/aer.103.6.2121
+
+Autor, D. H., Dorn, D., Hanson, G. H., & Song, J. (2013). Trade Adjustment: Worker Level Evidence (No. w19226). National Bureau of Economic Research. https://doi.org/10.3386/w19226
+Baldwin, R. E., & Magee, C. S. (2000). Is Trade Policy for Sale? Congressional Voting on Recent Trade Bills. Public Choice, 105(1/2), 79–101.
+
+Grossman, G. M., & Helpman, E. (1994). Protection for Sale. The American Economic Review, 84(4), 833–850.
+
+Kuk, J. S., Seligsohn, D., & Zhang, J. J. (2018). From Tiananmen to Outsourcing: The Effect of Rising Import Competition on Congressional Voting Towards China. Journal of Contemporary China, 27(109), 103–119. https://doi.org/10.1080/10670564.2017.1363024
+
+Margalit, Y. (2011). Costly Jobs: Trade-related Layoffs, Government Compensation, and Voting in U.S. Elections. The American Political Science Review, 105(1), 166–188.
+
+
+\newpage
+
+# Appendices
+
+## Appendix 1
+```{r, echo=FALSE, warning=FALSE,  message=FALSE, results='asis', fig.align = 'center'}
+manuf_map #map of manufacturing industry share
+```
+
+```{r, echo=FALSE, warning=FALSE,  message=FALSE, results='asis', fig.align = 'center'}
+offshore_map #map of offshorability index
+```
+
+\newpage
+
+## Appendix 2
+```{r, echo=FALSE, warning=FALSE,  message=FALSE, results='asis', fig.align = 'center'}
+models_out(1) #table of FTA bills
+```
+
+## Appendix 3
+- Scatterplot matrix of raw votes, ideology (dim1) and import competition intensity, 108th to 112th congress
+```{r, echo=FALSE, warning=FALSE,  message=FALSE, results='asis', fig.align = 'center'}
+smatrices_out(2) #raw vote, dim1, import comp
+```
+\newpage
+- Scatterplot matrix of raw votes, ideology (dim1) and import competition intensity, 108th congress only
+```{r, echo=FALSE, warning=FALSE,  message=FALSE, results='asis', fig.align = 'center'}
+smatrices_out(3) #vote 108, import comp, dim1 108
+```
+
+```{r, echo=FALSE, warning=FALSE,  message=FALSE, fig.align = 'center'}
+models_out(9) #qqplot for import concentration
+```
+
+\newpage
+
+## Appendix 4
+```{r, echo=FALSE, warning=FALSE,  message=FALSE, results='asis', fig.align = 'center'}
+models_out(3) #OLS for 108th - 112th Congresses, full controls
+```
+
+## Appendix 5
+```{r, echo=FALSE, warning=FALSE,  message=FALSE, results='asis', fig.align = 'center'}
+models_out(4) #probits for 110th and 116th Congresses
+```
+
+\newpage
+
+## Appendix 6
+```{r, echo=FALSE, warning=FALSE,  message=FALSE, results='asis', fig.align = 'center'}
+models_out(5) #probits for 108th congress, individual votes
+```
+
+## Appendix 7
+```{r, echo=FALSE, warning=FALSE,  message=FALSE, results='asis', fig.align = 'center'}
+models_out(7) #probits for 112th congress with full controls
+```
+
+\newpage
+
+## Appendix 8
+```{r, echo=FALSE, warning=FALSE,  message=FALSE, results='asis', fig.align = 'center'}
+models_out(8) #probits on TGAA and GSP votes
+```
+
+## Appendix 9
+- Scatterplot matrix showing correlation in voting patters for FTA votes in the 108th congress
+```{r, echo=FALSE, warning=FALSE,  message=FALSE, results='asis', fig.align = 'center', out.width="90%"}
+smatrices_out(4) #individual ftas in 108th
+```
+
+\newpage 
+
+## Appendix 10
+- Residual diagnostics for OLS specifications
+```{r, warning=FALSE, echo=TRUE, message=FALSE, fig.align='center'}
+lmtest::bptest(model8) 
+lmtest::bgtest(model8)
+
+```
+
+\newpage 
+
+```{r, warning=FALSE, echo=FALSE, message=FALSE, fig.align='center', out.width="80%"}
+car::avPlot(model8,"l_oth",
+            main="Added Variable Plot: log_d_imp",
+            xlab="log_d_imp | others")
+```
+```{r, warning=FALSE, echo=FALSE, message=FALSE, fig.align='center', out.width="80%"}
+olsrr::ols_plot_resid_stud(model8, print_plot = TRUE)
+```
+
